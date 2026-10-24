@@ -38,7 +38,7 @@ Then open <http://127.0.0.1:8000/docs> to try the API.
 | Method | Endpoint | Description |
 |---|---|---|
 | POST | `/save` | Body: `{"url": "https://..."}`. Fetches, extracts and stores the page. |
-| GET | `/search?q=term&limit=10` | Keyword search. Returns URL, title and a highlighted snippet. |
+| GET | `/semantic-search?q=...&limit=5` | Search by meaning. Returns the best-matching chunk per page with a similarity score. |
 
 ## Project structure
 
@@ -53,7 +53,7 @@ test_m1.py     # quick end-to-end check of fetch, store and search
 ## Roadmap
 
 - [x] **M1:** save, extract, store and keyword search
-- [ ] **M2:** chunk pages, generate embeddings locally, search by meaning
+- [x] **M2:** chunk pages, generate embeddings locally, search by meaning
 - [ ] **M3:** simple web UI, tags, raw HTML snapshots
 
 ## Why this project
