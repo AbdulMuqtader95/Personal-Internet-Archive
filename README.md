@@ -84,4 +84,4 @@ test_m2.py          # chunks saved pages and tests semantic search
 
 ## Why this project
 
-It is the retrieval layer for a larger project: an agentic RAG assistant that reasons over the archive.
+It is the retrieval layer for a planned next project: an agentic RAG assistant that reasons over the archive.
