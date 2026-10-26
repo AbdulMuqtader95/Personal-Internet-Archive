@@ -2,6 +2,8 @@
 
 A self-hosted archive for web pages. Save a URL, and the page's text is extracted and stored locally so you can search it later. Keyword search works today; search by meaning (semantic search) is in progress.
 
+<img src="docs/screenshot.jpeg" alt="Personal Internet Archive: semantic search results with match scores" width="480">
+
 ## Features
 
 - Save any web page by URL and extract its readable text
@@ -9,6 +11,8 @@ A self-hosted archive for web pages. Save a URL, and the page's text is extracte
 - Full-text search with highlighted snippets (SQLite FTS5)
 - Re-saving a URL updates the stored copy instead of duplicating it
 - REST API with interactive docs (FastAPI)
+- Semantic search: chunks pages, embeds them locally, and ranks results by meaning
+- Simple web UI at `/` with keyword and meaning search
 
 ## Tech stack
 
@@ -19,6 +23,7 @@ A self-hosted archive for web pages. Save a URL, and the page's text is extracte
 | Fetching | httpx |
 | Text extraction | trafilatura |
 | Storage and keyword search | SQLite with FTS5 |
+| Embeddings | sentence-transformers (all-MiniLM-L6-v2), numpy |
 
 ## Getting started
 
@@ -54,7 +59,7 @@ test_m1.py     # quick end-to-end check of fetch, store and search
 
 - [x] **M1:** save, extract, store and keyword search
 - [x] **M2:** chunk pages, generate embeddings locally, search by meaning
-- [ ] **M3:** simple web UI, tags, raw HTML snapshots
+- [ ] **M3:** web UI (done), saved-pages list, tags, raw HTML snapshots
 
 ## Why this project
 
