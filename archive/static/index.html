@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal Internet Archive</title>
+<style>
+  :root {
+    --bg: #eef1f4;
+    --surface: #ffffff;
+    --ink: #16202b;
+    --muted: #5b6877;
+    --line: #d3d9e0;
+    --accent: #2b4fe0;
+    --accent-ink: #ffffff;
+    --mark: #ffe27a;
+    --err: #b3261e;
+    color-scheme: light dark;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #11151b;
+      --surface: #171c24;
+      --ink: #e7ebf1;
+      --muted: #98a4b3;
+      --line: #2a323d;
+      --accent: #8ca5ff;
+      --accent-ink: #0e1220;
+      --mark: #6b5a00;
+      --err: #ff8a80;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  main { max-width: 44rem; margin: 0 auto; padding: 3rem 1.25rem 5rem; }
+
+  h1, h2, h3 { font-family: Georgia, "Iowan Old Style", "Times New Roman", serif; font-weight: 600; margin: 0; }
+  h1 { font-size: 2.1rem; line-height: 1.15; }
+  h2 { font-size: 1.15rem; margin-bottom: 0.6rem; }
+  .lede { color: var(--muted); margin: 0.5rem 0 2.5rem; max-width: 34rem; }
+  section { margin-bottom: 2.5rem; }
+
+  form { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+  input[type="url"], input[type="search"] {
+    flex: 1 1 14rem;
+    min-width: 0;
+    padding: 0.65rem 0.8rem;
+    font: inherit;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  button {
+    padding: 0.65rem 1.1rem;
+    font: inherit;
+    font-weight: 600;
+    color: var(--accent-ink);
+    background: var(--accent);
+    border: 0;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.55; cursor: progress; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .modes { display: flex; margin: 0; padding: 0; border: 0; min-width: 0; }
+  .modes legend { position: absolute; left: -9999px; }
+  .modes label {
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    cursor: pointer;
+  }
+  .modes label:first-of-type { border-radius: 6px 0 0 6px; }
+  .modes label:last-of-type { border-radius: 0 6px 6px 0; border-left: 0; }
+  .modes input { position: absolute; opacity: 0; }
+  .modes input:checked + span { font-weight: 700; color: var(--accent); }
+  .modes label:has(input:checked) { border-color: var(--accent); }
+  .modes label:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .status { min-height: 1.5rem; margin: 0.6rem 0 0; color: var(--muted); }
+  .status.error { color: var(--err); }
+
+  #results { list-style: none; margin: 1rem 0 0; padding: 0; }
+  .hit { padding: 1.1rem 0 1.1rem 1rem; border-left: 3px solid var(--line); margin-bottom: 0.4rem; }
+  .hit:hover { border-left-color: var(--accent); }
+  .hit h3 { font-size: 1.1rem; }
+  .hit a { color: var(--ink); text-decoration-color: var(--accent); text-underline-offset: 3px; }
+  .host { margin: 0.1rem 0 0.5rem; color: var(--muted); font-size: 0.85rem; }
+  .snippet { margin: 0; max-width: 40rem; overflow-wrap: anywhere; }
+  mark { background: var(--mark); color: inherit; padding: 0 0.1em; border-radius: 2px; }
+
+  .score { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.6rem; color: var(--muted); font-size: 0.85rem; }
+  .bar { width: 8rem; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+  .bar span { display: block; height: 100%; background: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Personal Internet Archive</h1>
+    <p class="lede">Save pages you want to keep. Find them later by the words they use, or by what they are about.</p>
+  </header>
+
+  <section aria-labelledby="save-h">
+    <h2 id="save-h">Save a page</h2>
+    <form id="save-form">
+      <input id="save-url" type="url" placeholder="https://example.com/article" aria-label="Page address" required>
+      <button id="save-btn" type="submit">Save page</button>
+    </form>
+    <p id="save-status" class="status" role="status" aria-live="polite"></p>
+  </section>
+
+  <section aria-labelledby="search-h">
+    <h2 id="search-h">Search</h2>
+    <form id="search-form">
+      <input id="search-q" type="search" placeholder="Try: how do peers find each other" aria-label="Search terms" required>
+      <fieldset class="modes">
+        <legend>Search type</legend>
+        <label><input type="radio" name="mode" value="keyword"><span>Keyword</span></label>
+        <label><input type="radio" name="mode" value="meaning" checked><span>Meaning</span></label>
+      </fieldset>
+      <button id="search-btn" type="submit">Search</button>
+    </form>
+    <p id="search-status" class="status" role="status" aria-live="polite"></p>
+    <ol id="results"></ol>
+  </section>
+</main>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  // Call the API and turn failures into readable messages.
+  async function api(path, options) {
+    let res;
+    try {
+      res = await fetch(path, options);
+    } catch (e) {
+      throw new Error("Can\u2019t reach the server. Check that it is running.");
+    }
+    let body = null;
+    try { body = await res.json(); } catch (e) { /* no JSON body */ }
+    if (!res.ok) {
+      if (body && typeof body.detail === "string") throw new Error(body.detail);
+      if (body && Array.isArray(body.detail)) throw new Error("Enter a valid web address or search term.");
+      throw new Error("Request failed (" + res.status + ").");
+    }
+    return body;
+  }
+
+  function setStatus(el, text, isError) {
+    el.textContent = text;       // textContent: server text can never inject HTML
+    el.classList.toggle("error", Boolean(isError));
+  }
+
+  // Keyword snippets mark matches as [word]. Turn those into <mark>,
+  // but leave citation numbers like [5] alone.
+  function addHighlighted(el, text) {
+    text.split(/(\[[^\]]*\])/).forEach((part) => {
+      const m = part.match(/^\[([^\]]*)\]$/);
+      if (m && !/^\d+$/.test(m[1])) {
+        const mark = document.createElement("mark");
+        mark.textContent = m[1];
+        el.appendChild(mark);
+      } else {
+        el.appendChild(document.createTextNode(part));
+      }
+    });
+  }
+
+  function hostOf(url) {
+    try { return new URL(url).hostname; } catch (e) { return ""; }
+  }
+
+  function render(items, mode) {
+    const list = $("results");
+    list.replaceChildren();
+    items.forEach((item) => {
+      const li = document.createElement("li");
+      li.className = "hit";
+
+      const h = document.createElement("h3");
+      const a = document.createElement("a");
+      a.textContent = item.title || item.url;
+      if (/^https?:\/\//i.test(item.url)) a.href = item.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      h.appendChild(a);
+
+      const host = document.createElement("p");
+      host.className = "host";
+      host.textContent = hostOf(item.url);
+
+      const snippet = document.createElement("p");
+      snippet.className = "snippet";
+      if (mode === "meaning") snippet.textContent = item.chunk;
+      else addHighlighted(snippet, item.snippet);
+
+      li.append(h, host, snippet);
+
+      if (mode === "meaning" && typeof item.score === "number") {
+        const score = document.createElement("div");
+        score.className = "score";
+        const bar = document.createElement("span");
+        bar.className = "bar";
+        const fill = document.createElement("span");
+        fill.style.width = Math.max(0, Math.min(100, item.score * 100)) + "%";
+        bar.appendChild(fill);
+        const label = document.createElement("span");
+        label.textContent = item.score.toFixed(2) + " match";
+        score.append(bar, label);
+        li.appendChild(score);
+      }
+      list.appendChild(li);
+    });
+  }
+
+  $("save-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const url = $("save-url").value.trim();
+    if (!url) return;
+    $("save-btn").disabled = true;
+    setStatus($("save-status"), "Saving\u2026 the first save after the server starts can take a few seconds.");
+    try {
+      const page = await api("/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const n = page.chunks;
+      setStatus($("save-status"), "Saved \u201c" + page.title + "\u201d in " + n + (n === 1 ? " chunk." : " chunks."));
+      $("save-url").value = "";
+    } catch (err) {
+      setStatus($("save-status"), err.message, true);
+    } finally {
+      $("save-btn").disabled = false;
+    }
+  });
+
+  $("search-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const q = $("search-q").value.trim();
+    if (!q) return;
+    const mode = document.querySelector('input[name="mode"]:checked').value;
+    const path = mode === "meaning" ? "/semantic-search" : "/search";
+    $("search-btn").disabled = true;
+    $("results").replaceChildren();
+    setStatus($("search-status"), mode === "meaning"
+      ? "Searching\u2026 the first search after the server starts can take a few seconds."
+      : "Searching\u2026");
+    try {
+      const items = await api(path + "?q=" + encodeURIComponent(q));
+      if (items.length === 0) {
+        setStatus($("search-status"), mode === "meaning"
+          ? "No close matches. Try different wording, or save more pages."
+          : "No pages contain those words. Keyword search needs exact words; try Meaning to search by idea.");
+      } else {
+        setStatus($("search-status"), items.length + (items.length === 1 ? " page found." : " pages found."));
+        render(items, mode);
+      }
+    } catch (err) {
+      setStatus($("search-status"), err.message, true);
+    } finally {
+      $("search-btn").disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

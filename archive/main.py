@@ -8,9 +8,14 @@ from .db import init_db, save_page, save_chunks, search, semantic_search
 from .chunk import chunk_text
 from .embed import embed
 
+from pathlib import Path
+from fastapi.responses import FileResponse
+
 app = FastAPI(title="Personal Internet Archive")
 
-
+@app.get("/", include_in_schema=False)
+def home():
+    return FileResponse(Path(__file__).parent / "static" / "index.html")
 class SaveRequest(BaseModel):
     url: str
 
