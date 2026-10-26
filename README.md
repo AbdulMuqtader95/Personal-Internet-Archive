@@ -38,7 +38,7 @@ A self-hosted archive for web pages. Save a URL, and the page's text is extracte
 ```bash
 conda create -n pia python=3.11 -y
 conda activate pia
-pip install fastapi uvicorn httpx trafilatura sentence-transformers numpy
+pip install -r requirements.txt
 python -m uvicorn archive.main:app --reload
 ```
 
