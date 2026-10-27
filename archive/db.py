@@ -100,3 +100,19 @@ def list_pages(con):
         "FROM pages p LEFT JOIN chunks c ON c.page_id = p.id "
         "GROUP BY p.id ORDER BY p.saved_at DESC, p.id DESC"
     ).fetchall()
+
+def delete_page(con, page_id):
+    row = con.execute(
+        "SELECT title, text FROM pages WHERE id = ?", (page_id,)
+    ).fetchone()
+    if row is None:
+        return False
+    # remove the keyword-search entry (needs the original values)
+    con.execute(
+        "INSERT INTO pages_fts (pages_fts, rowid, title, text) VALUES ('delete', ?, ?, ?)",
+        (page_id, row[0], row[1]),
+    )
+    con.execute("DELETE FROM chunks WHERE page_id = ?", (page_id,))
+    con.execute("DELETE FROM pages WHERE id = ?", (page_id,))
+    con.commit()
+    return True

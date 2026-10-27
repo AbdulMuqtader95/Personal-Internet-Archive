@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from .fetch import fetch_and_extract
-from .db import init_db, save_page, save_chunks, search, semantic_search, list_pages
+from .db import init_db, save_page, save_chunks, search, semantic_search, list_pages, delete_page
 from .chunk import chunk_text
 from .embed import embed
 
@@ -76,3 +76,14 @@ def pages():
         {"id": i, "title": t, "url": u, "saved_at": s, "chunks": n}
         for i, t, u, s, n in rows
     ]
+
+@app.delete("/pages/{page_id}")
+def remove_page(page_id: int):
+    con = init_db()
+    try:
+        deleted = delete_page(con, page_id)
+    finally:
+        con.close()
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Page not found")
+    return {"deleted": page_id}
