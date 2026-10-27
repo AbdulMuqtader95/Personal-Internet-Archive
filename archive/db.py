@@ -93,3 +93,10 @@ def semantic_search(con, query_vec, limit=5, min_score=0.25):
         if len(results) == limit:
             break
     return results
+
+def list_pages(con):
+    return con.execute(
+        "SELECT p.id, p.title, p.url, p.saved_at, COUNT(c.id) "
+        "FROM pages p LEFT JOIN chunks c ON c.page_id = p.id "
+        "GROUP BY p.id ORDER BY p.saved_at DESC, p.id DESC"
+    ).fetchall()

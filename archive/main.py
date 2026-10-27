@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from .fetch import fetch_and_extract
-from .db import init_db, save_page, save_chunks, search, semantic_search
+from .db import init_db, save_page, save_chunks, search, semantic_search, list_pages
 from .chunk import chunk_text
 from .embed import embed
 
@@ -64,3 +64,15 @@ def semantic(q: str, limit: int = 5):
         return semantic_search(con, qvec, limit)
     finally:
         con.close()
+
+@app.get("/pages")
+def pages():
+    con = init_db()
+    try:
+        rows = list_pages(con)
+    finally:
+        con.close()
+    return [
+        {"id": i, "title": t, "url": u, "saved_at": s, "chunks": n}
+        for i, t, u, s, n in rows
+    ]
