@@ -100,6 +100,14 @@
   .score { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.6rem; color: var(--muted); font-size: 0.85rem; }
   .bar { width: 8rem; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
   .bar span { display: block; height: 100%; background: var(--accent); }
+
+  #pages-list { list-style: none; margin: 0; padding: 0; }
+  .page-row { display: flex; align-items: baseline; gap: 1rem; padding: 0.7rem 0; border-bottom: 1px solid var(--line); }
+  .page-row .info { flex: 1; min-width: 0; }
+  .page-row a { color: var(--ink); overflow-wrap: anywhere; }
+  .page-row .meta { color: var(--muted); font-size: 0.85rem; }
+  button.delete { background: transparent; color: var(--err); border: 1px solid var(--line); padding: 0.35rem 0.7rem; font-weight: 500; }
+  button.delete:hover { border-color: var(--err); }
 </style>
 </head>
 <body>
@@ -132,6 +140,13 @@
     <p id="search-status" class="status" role="status" aria-live="polite"></p>
     <ol id="results"></ol>
   </section>
+
+  <section aria-labelledby="pages-h">
+    <h2 id="pages-h">Saved pages</h2>
+    <p id="pages-status" class="status" role="status" aria-live="polite"></p>
+    <ul id="pages-list"></ul>
+  </section>
+
 </main>
 
 <script>
@@ -237,6 +252,7 @@
       const n = page.chunks;
       setStatus($("save-status"), "Saved \u201c" + page.title + "\u201d in " + n + (n === 1 ? " chunk." : " chunks."));
       $("save-url").value = "";
+      loadPages();
     } catch (err) {
       setStatus($("save-status"), err.message, true);
     } finally {
@@ -271,6 +287,62 @@
       $("search-btn").disabled = false;
     }
   });
+
+  async function loadPages() {
+    const list = $("pages-list");
+    try {
+      const pages = await api("/pages");
+      list.replaceChildren();
+      setStatus($("pages-status"), pages.length === 0
+        ? "Nothing saved yet. Save a page above to get started."
+        : pages.length + (pages.length === 1 ? " page saved." : " pages saved."));
+      pages.forEach((p) => {
+        const li = document.createElement("li");
+        li.className = "page-row";
+
+        const info = document.createElement("div");
+        info.className = "info";
+        const a = document.createElement("a");
+        a.textContent = p.title || p.url;
+        if (/^https?:\/\//i.test(p.url)) a.href = p.url;
+        a.target = "_blank";
+        a.rel = "noopener";
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.textContent = hostOf(p.url) + " \u00b7 saved " + (p.saved_at || "").slice(0, 10) +
+          " \u00b7 " + p.chunks + (p.chunks === 1 ? " chunk" : " chunks");
+        info.append(a, meta);
+
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "delete";
+        del.textContent = "Delete";
+        del.setAttribute("aria-label", "Delete " + (p.title || p.url));
+        del.addEventListener("click", () => deletePage(p, del));
+
+        li.append(info, del);
+        list.appendChild(li);
+      });
+    } catch (err) {
+      setStatus($("pages-status"), err.message, true);
+    }
+  }
+
+  async function deletePage(p, button) {
+    if (!confirm("Delete \u201c" + (p.title || p.url) + "\u201d from the archive?")) return;
+    button.disabled = true;
+    try {
+      await api("/pages/" + p.id, { method: "DELETE" });
+      $("results").replaceChildren();      // old result cards might point at the deleted page
+      setStatus($("search-status"), "");
+      await loadPages();
+    } catch (err) {
+      setStatus($("pages-status"), err.message, true);
+      button.disabled = false;
+    }
+  }
+
+  loadPages();
 </script>
 </body>
 </html>
