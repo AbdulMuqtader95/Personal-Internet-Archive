@@ -13,6 +13,7 @@ A self-hosted archive for web pages. Save a URL, and the page's text is extracte
 - Re-saving a URL updates the stored copy instead of duplicating it
 - Simple web UI at `/` with keyword and meaning search
 - REST API with interactive docs (FastAPI)
+- Saved-pages list in the UI, with delete that also cleans up the search index
 
 ## How it works
 
@@ -56,6 +57,8 @@ The first save or semantic search after starting the server takes a few seconds 
 | POST | `/save` | Body: `{"url": "https://..."}`. Fetches, extracts, chunks, embeds and stores the page. |
 | GET | `/search?q=term&limit=10` | Keyword search. Returns URL, title and a snippet with matches marked. |
 | GET | `/semantic-search?q=...&limit=5` | Search by meaning. Returns the best-matching chunk per page with a similarity score. |
+| GET | `/pages` | List all saved pages with title, URL, saved date and chunk count. |
+| DELETE | `/pages/{id}` | Delete a page along with its search index entry and chunks. |
 
 ## Project structure
 
@@ -80,12 +83,9 @@ test_m2.py          # chunks saved pages and tests semantic search
 - [x] **M1:** save, extract, store and keyword search
 - [x] **M2:** chunk pages, generate embeddings locally, search by meaning
 - [x] **M3:** web UI
-- [ ] **M4:** saved-pages list with delete, tags, raw HTML snapshots
+- [x] **M4:** saved-pages list with delete
+- [ ] **M5:** tags and raw HTML snapshots
 
 ## Why this project
 
-<<<<<<< HEAD
-It is the retrieval layer for a planned next project: an agentic RAG assistant that reasons over the archive.
-=======
 It is the retrieval layer for a planned next project: an agentic RAG assistant that reasons over the archive
->>>>>>> 9964a81 (Add requirements.txt)
