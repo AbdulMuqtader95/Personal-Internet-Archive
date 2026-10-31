@@ -14,6 +14,7 @@ A self-hosted archive for web pages. Save a URL, and the page's text is extracte
 - Simple web UI at `/` with keyword and meaning search
 - REST API with interactive docs (FastAPI)
 - Saved-pages list in the UI, with delete that also cleans up the search index
+- Raw HTML snapshots: the original page is stored and can be viewed safely in a sandbox
 
 ## How it works
 
@@ -58,7 +59,8 @@ The first save or semantic search after starting the server takes a few seconds 
 | GET | `/search?q=term&limit=10` | Keyword search. Returns URL, title and a snippet with matches marked. |
 | GET | `/semantic-search?q=...&limit=5` | Search by meaning. Returns the best-matching chunk per page with a similarity score. |
 | GET | `/pages` | List all saved pages with title, URL, saved date and chunk count. |
-| DELETE | `/pages/{id}` | Delete a page along with its search index entry and chunks. |
+| DELETE | `/pages/{id}` | Delete a page along with its search index entry, chunks and snapshot. |
+| GET | `/pages/{id}/snapshot` | The original HTML saved with the page, served with `Content-Security-Policy: sandbox` so scripts never run. Returns 404 for pages saved before snapshots existed (re-save the URL to create one). |
 
 ## Project structure
 
@@ -73,9 +75,11 @@ archive/
     └── index.html  # web UI
 docs/
 └── screenshot.jpeg
-test_m1.py          # end-to-end check: fetch, store, keyword search
-test_embed.py       # checks that the embedding model loads and works
-test_m2.py          # chunks saved pages and tests semantic search
+tests/
+├── test_m1.py      # end-to-end check: fetch, store, keyword search
+├── test_embed.py   # checks that the embedding model loads and works
+├── test_m2.py      # chunks saved pages and tests semantic search
+└── test_m5.py      # automated tests for snapshots (fake network and model)
 ```
 
 ## Roadmap
@@ -84,7 +88,8 @@ test_m2.py          # chunks saved pages and tests semantic search
 - [x] **M2:** chunk pages, generate embeddings locally, search by meaning
 - [x] **M3:** web UI
 - [x] **M4:** saved-pages list with delete
-- [ ] **M5:** tags and raw HTML snapshots
+- [x] **M5.1:** raw HTML snapshots
+- [ ] **M5.2:** tags
 
 ## Why this project
 
