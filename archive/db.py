@@ -4,10 +4,15 @@ import numpy as np
 def init_db(path="archive.db"):
     con = sqlite3.connect(path)
     con.executescript("""
-        CREATE TABLE IF NOT EXISTS snapshots (
+    CREATE TABLE IF NOT EXISTS snapshots (
         page_id INTEGER PRIMARY KEY,
         html TEXT,
         saved_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS tags (
+        page_id INTEGER,
+        tag TEXT,
+        PRIMARY KEY (page_id, tag)
     );
     CREATE TABLE IF NOT EXISTS pages (
         id INTEGER PRIMARY KEY,
@@ -85,6 +90,33 @@ def get_snapshot(con, page_id):
     ).fetchone()
     return row[0] if row else None
 
+def normalize_tag(tag):
+    return " ".join(tag.lower().split())
+
+def add_tag(con, page_id, tag):
+    tag = normalize_tag(tag)
+    if not tag:
+        return False
+    if con.execute("SELECT 1 FROM pages WHERE id = ?", (page_id,)).fetchone() is None:
+        return False
+    con.execute("INSERT OR IGNORE INTO tags (page_id, tag) VALUES (?, ?)", (page_id, tag))
+    con.commit()
+    return True
+
+def remove_tag(con, page_id, tag):
+    cur = con.execute(
+        "DELETE FROM tags WHERE page_id = ? AND tag = ?",
+        (page_id, normalize_tag(tag)),
+    )
+    con.commit()
+    return cur.rowcount > 0
+
+def tags_by_page(con):
+    result = {}
+    for page_id, tag in con.execute("SELECT page_id, tag FROM tags ORDER BY tag"):
+        result.setdefault(page_id, []).append(tag)
+    return result
+
 def semantic_search(con, query_vec, limit=5, min_score=0.25):
     rows = con.execute(
         "SELECT c.text, c.embedding, p.url, p.title "
@@ -112,12 +144,17 @@ def semantic_search(con, query_vec, limit=5, min_score=0.25):
             break
     return results
 
-def list_pages(con):
-    return con.execute(
+def list_pages(con, tag=None):
+    sql = (
         "SELECT p.id, p.title, p.url, p.saved_at, COUNT(c.id) "
         "FROM pages p LEFT JOIN chunks c ON c.page_id = p.id "
-        "GROUP BY p.id ORDER BY p.saved_at DESC, p.id DESC"
-    ).fetchall()
+    )
+    params = ()
+    if tag:
+        sql += "WHERE p.id IN (SELECT page_id FROM tags WHERE tag = ?) "
+        params = (normalize_tag(tag),)
+    sql += "GROUP BY p.id ORDER BY p.saved_at DESC, p.id DESC"
+    return con.execute(sql, params).fetchall()
 
 def delete_page(con, page_id):
     row = con.execute(
@@ -133,5 +170,6 @@ def delete_page(con, page_id):
     con.execute("DELETE FROM chunks WHERE page_id = ?", (page_id,))
     con.execute("DELETE FROM snapshots WHERE page_id = ?", (page_id,))
     con.execute("DELETE FROM pages WHERE id = ?", (page_id,))
+    con.execute("DELETE FROM tags WHERE page_id = ?", (page_id,))
     con.commit()
     return True
