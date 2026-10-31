@@ -4,12 +4,12 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from .fetch import fetch_and_extract
-from .db import init_db, save_page, save_chunks, search, semantic_search, list_pages, delete_page
+from .db import init_db, save_page, save_chunks, search, semantic_search, list_pages, delete_page, save_snapshot, get_snapshot
 from .chunk import chunk_text
 from .embed import embed
 
 from pathlib import Path
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 app = FastAPI(title="Personal Internet Archive")
 
@@ -35,6 +35,7 @@ def save(req: SaveRequest):
         chunks = chunk_text(page["text"])
         vectors = embed(chunks) if chunks else []
         save_chunks(con, page_id, chunks, vectors)
+        save_snapshot(con, page_id, page["html"])
     finally:
         con.close()
     return {
@@ -87,3 +88,14 @@ def remove_page(page_id: int):
     if not deleted:
         raise HTTPException(status_code=404, detail="Page not found")
     return {"deleted": page_id}
+
+@app.get("/pages/{page_id}/snapshot")
+def snapshot(page_id: int):
+    con = init_db()
+    try:
+        html = get_snapshot(con, page_id)
+    finally:
+        con.close()
+    if html is None:
+        raise HTTPException(status_code=404, detail="No snapshot for this page")
+    return HTMLResponse(html, headers={"Content-Security-Policy": "sandbox"})
