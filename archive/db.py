@@ -4,6 +4,11 @@ import numpy as np
 def init_db(path="archive.db"):
     con = sqlite3.connect(path)
     con.executescript("""
+        CREATE TABLE IF NOT EXISTS snapshots (
+        page_id INTEGER PRIMARY KEY,
+        html TEXT,
+        saved_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
     CREATE TABLE IF NOT EXISTS pages (
         id INTEGER PRIMARY KEY,
         url TEXT UNIQUE,
@@ -67,6 +72,19 @@ def save_chunks(con, page_id, chunks, vectors):
     )
     con.commit()
 
+def save_snapshot(con, page_id, html):
+    con.execute(
+        "INSERT OR REPLACE INTO snapshots (page_id, html) VALUES (?, ?)",
+        (page_id, html),
+    )
+    con.commit()
+
+def get_snapshot(con, page_id):
+    row = con.execute(
+        "SELECT html FROM snapshots WHERE page_id = ?", (page_id,)
+    ).fetchone()
+    return row[0] if row else None
+
 def semantic_search(con, query_vec, limit=5, min_score=0.25):
     rows = con.execute(
         "SELECT c.text, c.embedding, p.url, p.title "
@@ -113,6 +131,7 @@ def delete_page(con, page_id):
         (page_id, row[0], row[1]),
     )
     con.execute("DELETE FROM chunks WHERE page_id = ?", (page_id,))
+    con.execute("DELETE FROM snapshots WHERE page_id = ?", (page_id,))
     con.execute("DELETE FROM pages WHERE id = ?", (page_id,))
     con.commit()
     return True
