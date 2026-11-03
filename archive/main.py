@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from .fetch import fetch_and_extract
-from .db import init_db, save_page, save_chunks, search, semantic_search, list_pages, delete_page, save_snapshot, get_snapshot
+from .db import init_db, save_page, save_chunks, search, semantic_search, list_pages, delete_page, save_snapshot, get_snapshot, add_tag, remove_tag, tags_by_page
 from .chunk import chunk_text
 from .embed import embed
 
@@ -45,6 +45,9 @@ def save(req: SaveRequest):
         "chunks": len(chunks),
     }
 
+class TagRequest(BaseModel):
+    tag: str
+
 
 @app.get("/search")
 def search_pages(q: str, limit: int = 10):
@@ -67,14 +70,15 @@ def semantic(q: str, limit: int = 5):
         con.close()
 
 @app.get("/pages")
-def pages():
+def pages(tag: str | None = None):
     con = init_db()
     try:
-        rows = list_pages(con)
+        rows = list_pages(con, tag)
+        tag_map = tags_by_page(con)
     finally:
         con.close()
     return [
-        {"id": i, "title": t, "url": u, "saved_at": s, "chunks": n}
+        {"id": i, "title": t, "url": u, "saved_at": s, "chunks": n, "tags": tag_map.get(i, [])}
         for i, t, u, s, n in rows
     ]
 
@@ -99,3 +103,25 @@ def snapshot(page_id: int):
     if html is None:
         raise HTTPException(status_code=404, detail="No snapshot for this page")
     return HTMLResponse(html, headers={"Content-Security-Policy": "sandbox"})
+
+@app.post("/pages/{page_id}/tags")
+def create_tag(page_id: int, req: TagRequest):
+    con = init_db()
+    try:
+        ok = add_tag(con, page_id, req.tag)
+    finally:
+        con.close()
+    if not ok:
+        raise HTTPException(status_code=404, detail="Page not found or empty tag")
+    return {"page_id": page_id, "tag": " ".join(req.tag.lower().split())}
+
+@app.delete("/pages/{page_id}/tags/{tag}")
+def delete_tag(page_id: int, tag: str):
+    con = init_db()
+    try:
+        removed = remove_tag(con, page_id, tag)
+    finally:
+        con.close()
+    if not removed:
+        raise HTTPException(status_code=404, detail="Tag not found on this page")
+    return {"page_id": page_id, "removed": tag}
