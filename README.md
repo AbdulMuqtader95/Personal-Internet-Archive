@@ -15,6 +15,7 @@ A self-hosted archive for web pages. Save a URL, and the page's text is extracte
 - REST API with interactive docs (FastAPI)
 - Saved-pages list in the UI, with delete that also cleans up the search index
 - Raw HTML snapshots: the original page is stored and can be viewed safely in a sandbox
+- Tags: label pages, click a tag to filter the saved-pages list
 
 ## How it works
 
@@ -58,8 +59,10 @@ The first save or semantic search after starting the server takes a few seconds 
 | POST | `/save` | Body: `{"url": "https://..."}`. Fetches, extracts, chunks, embeds and stores the page. |
 | GET | `/search?q=term&limit=10` | Keyword search. Returns URL, title and a snippet with matches marked. |
 | GET | `/semantic-search?q=...&limit=5` | Search by meaning. Returns the best-matching chunk per page with a similarity score. |
-| GET | `/pages` | List all saved pages with title, URL, saved date and chunk count. |
-| DELETE | `/pages/{id}` | Delete a page along with its search index entry, chunks and snapshot. |
+| GET | `/pages?tag=python` | List saved pages with title, URL, saved date, chunk count and tags. The optional `tag` filters to pages with that tag. |
+| DELETE | `/pages/{id}` | Delete a page along with its search index entry, chunks, snapshot and tags. |
+| POST | `/pages/{id}/tags` | Body: `{"tag": "python"}`. Adds a tag (lowercased and trimmed). Adding the same tag twice is ignored. |
+| DELETE | `/pages/{id}/tags/{tag}` | Remove a tag from a page. |
 | GET | `/pages/{id}/snapshot` | The original HTML saved with the page, served with `Content-Security-Policy: sandbox` so scripts never run. Returns 404 for pages saved before snapshots existed (re-save the URL to create one). |
 
 ## Project structure
@@ -80,6 +83,7 @@ tests/
 ├── test_embed.py   # checks that the embedding model loads and works
 ├── test_m2.py      # chunks saved pages and tests semantic search
 └── test_m5.py      # automated tests for snapshots (fake network and model)
+└── test_m5_tags.py # automated tests for tags (fake network and model)
 ```
 
 ## Roadmap
@@ -89,7 +93,7 @@ tests/
 - [x] **M3:** web UI
 - [x] **M4:** saved-pages list with delete
 - [x] **M5.1:** raw HTML snapshots
-- [ ] **M5.2:** tags
+- [x] **M5.2:** tags
 
 ## Why this project
 
