@@ -108,6 +108,14 @@
   .page-row .meta { color: var(--muted); font-size: 0.85rem; }
   button.delete { background: transparent; color: var(--err); border: 1px solid var(--line); padding: 0.35rem 0.7rem; font-weight: 500; }
   button.delete:hover { border-color: var(--err); }
+
+  .tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-top: 0.4rem; }
+  .tag { display: inline-flex; align-items: center; padding: 0.05rem 0.2rem 0.05rem 0.6rem; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 0.8rem; }
+  button.tag-remove { background: transparent; color: var(--muted); padding: 0 0.4rem; font-weight: 500; line-height: 1.4; }
+  button.tag-remove:hover { color: var(--err); }
+  .tags form { flex-wrap: nowrap; }
+  input.tag-input { flex: 0 1 7rem; min-width: 0; padding: 0.15rem 0.6rem; font: inherit; font-size: 0.8rem; color: var(--ink); background: var(--surface); border: 1px dashed var(--line); border-radius: 999px; }
+
 </style>
 </head>
 <body>
@@ -287,6 +295,63 @@
       $("search-btn").disabled = false;
     }
   });
+  // One row per saved page: tag chips with an x to remove, plus an input to add one.
+  function buildTags(p) {
+    const wrap = document.createElement("div");
+    wrap.className = "tags";
+
+    (p.tags || []).forEach((tag) => {
+      const chip = document.createElement("span");
+      chip.className = "tag";
+      chip.append(document.createTextNode(tag));
+
+      const x = document.createElement("button");
+      x.type = "button";
+      x.className = "tag-remove";
+      x.textContent = "\u00d7";
+      x.setAttribute("aria-label", "Remove tag " + tag);
+      x.addEventListener("click", async () => {
+        x.disabled = true;
+        try {
+          await api("/pages/" + p.id + "/tags/" + encodeURIComponent(tag), { method: "DELETE" });
+          await loadPages();
+        } catch (err) {
+          setStatus($("pages-status"), err.message, true);
+          x.disabled = false;
+        }
+      });
+
+      chip.appendChild(x);
+      wrap.appendChild(chip);
+    });
+
+    const form = document.createElement("form");
+    const input = document.createElement("input");
+    input.type = "text";
+    input.className = "tag-input";
+    input.placeholder = "add tag";
+    input.setAttribute("aria-label", "Add a tag to " + (p.title || p.url));
+    form.appendChild(input);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const tag = input.value.trim();
+      if (!tag) return;
+      input.disabled = true;
+      try {
+        await api("/pages/" + p.id + "/tags", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tag }),
+        });
+        await loadPages();
+      } catch (err) {
+        setStatus($("pages-status"), err.message, true);
+        input.disabled = false;
+      }
+    });
+    wrap.appendChild(form);
+    return wrap;
+  }
 
   async function loadPages() {
     const list = $("pages-list");
@@ -311,8 +376,8 @@
         meta.className = "meta";
         meta.textContent = hostOf(p.url) + " \u00b7 saved " + (p.saved_at || "").slice(0, 10) +
           " \u00b7 " + p.chunks + (p.chunks === 1 ? " chunk" : " chunks");
-        info.append(a, meta);
-
+        info.append(a, meta, buildTags(p));
+        
         const del = document.createElement("button");
         del.type = "button";
         del.className = "delete";
