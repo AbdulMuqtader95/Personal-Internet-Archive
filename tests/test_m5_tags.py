@@ -67,6 +67,11 @@ def run():
     assert client.delete(f"/pages/{a}/tags/machine%20learning").status_code == 404
     print("ok: tag removed, second removal is 404")
 
+    # tags containing slashes can be added and removed
+    assert client.post(f"/pages/{a}/tags", json={"tag": "c/c++"}).status_code == 200
+    assert client.delete(f"/pages/{a}/tags/c%2Fc%2B%2B").status_code == 200
+    print("ok: tag with slash removed")
+
     # deleting a page removes its tags
     assert client.delete(f"/pages/{a}").status_code == 200
     assert client.get("/pages", params={"tag": "python"}).json() == []

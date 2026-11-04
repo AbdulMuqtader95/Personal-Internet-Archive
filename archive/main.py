@@ -115,7 +115,7 @@ def create_tag(page_id: int, req: TagRequest):
         raise HTTPException(status_code=404, detail="Page not found or empty tag")
     return {"page_id": page_id, "tag": " ".join(req.tag.lower().split())}
 
-@app.delete("/pages/{page_id}/tags/{tag}")
+@app.delete("/pages/{page_id}/tags/{tag:path}")
 def delete_tag(page_id: int, tag: str):
     con = init_db()
     try:
