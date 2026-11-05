@@ -2,7 +2,7 @@ import httpx
 import trafilatura
 
 HEADERS = {
-    "User-Agent": "PersonalInternetArchive/0.1 (personal learning project; abdulsfakemail@gmail.com)"
+    "User-Agent": "PersonalInternetArchive/0.1 (personal learning project; <your@email.com>)"
 }
 
 def fetch_and_extract(url: str) -> dict:
